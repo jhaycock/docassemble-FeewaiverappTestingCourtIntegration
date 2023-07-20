@@ -1,0 +1,541 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+#  - ptla_custom_organization.yml
+---
+metadata:
+  title: |
+    Maine Fee Waiver Application
+  short title: |
+    Maine Fee Waiver
+  tags:
+    - Other
+  authors:
+    - Pine Tree Legal Assistance
+---
+mandatory: True
+comment: |
+  Global interview metadata
+variable name: interview_metadata["feewaiverapp"]
+data:
+  al_weaver_version: "1.8.0"
+  generated on: "2023-01-09"
+  title: >-
+    Maine Fee Waiver Application
+  short title: >-
+    Maine Fee Waiver
+  description: |-
+    This interview will complete Maine Judicial Branch Form CV-067, the Application to Proceed without Payment of Fees.
+  original_form: >-
+    https://mjbportal.courts.maine.gov/CourtForms/FormsLists/DownloadForm?strFormNumber=CV-067
+  allowed courts: 
+    - "District Court"
+    - "Superior Court"
+  categories:
+    - "Fee waiver"
+    - "application to proceed without payment of fees"
+  typical role: "unknown"
+  generate download screen: True
+---
+code: |
+  interview_metadata['main_interview_key'] =  'feewaiverapp'
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "ME"
+---
+code: |
+  github_repo_name =  'docassemble-Feewaiverapp'
+---
+code: |
+  interview_short_title = "Ask the court for a fee waiver"
+---
+code: |
+  al_form_type = "existing_case" 
+---
+objects:
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+  - court_list: ALCourtLoader.using(file_name='ptlacourtaddresstest.xlsx')
+---
+sections:
+  - review_feewaiverapp: Review your answers
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_feewaiverapp
+code: |
+  # Set the allowed courts for this interview
+  allowed_courts = interview_metadata["feewaiverapp"]["allowed courts"]
+  nav.set_section("review_feewaiverapp")
+  # Below sets the user_role and user_ask_role by asking a question.
+  # You can set user_ask_role directly instead to either 'plaintiff' or 'defendant'
+  user_ask_role
+  Introduction
+  user_is_plaintiff
+  court_selection
+  court_district
+  court_town
+  court_county
+  docket_number
+  set_progress(16)
+  filing_fee
+  no_service_by_mail
+  if no_service_by_mail == True:
+    no_service_by_mail_reason
+  defendants.gather()
+  plaintiffs.gather()
+  set_progress(32)
+  signature_date
+  set_progress(48)
+  users[0].address.address
+  user_email
+  set_progress(64)
+  feewaiverapp_preview_question
+  user_signature
+  interview_order_feewaiverapp = True
+---
+###################### Main order ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: True
+code: |
+  al_intro_screen
+  feewaiverapp_intro
+  interview_order_feewaiverapp
+  signature_date
+  # Store anonymous data for analytics / statistics
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  feewaiverapp_download
+---
+comment: |
+  This question is used to introduce your interview. Please customize
+id: Maine_Fee_Waiver_Application
+continue button field: feewaiverapp_intro
+question: |
+  Maine Fee Waiver Application
+subquestion: |
+  You can use this Maine Fee Waiver Form to ask the court to waive fees like the filing fee, mediation fee, or other court costs if you cannot afford to pay them. You will also need to complete another form, CV-191, to complete your fee waiver application.
+---
+id: Introduction
+question: |
+  Introduction
+subquestion: |
+  Welcome to our easy Maine fee waiver application! This interview will take you through the process of filling out your Maine Application to Proceed without Payment of Fees. At the end, you will be able to save or print your completed form for filing with the court in your case.
+continue button field: Introduction
+---
+#id: About You
+#question: |
+#  About You
+#subquestion: |
+#  We need to know a little bit about you and your role in this court case.
+#fields:
+#  - "Did you start this court case?": user_is_plaintiff
+#    datatype: yesno
+#  - "Are you responding to a court case someone else started?": user_is_defendant
+#    datatype: yesno
+---
+code: |
+  if user_ask_role == "plaintiff":
+    user_is_defendant = False
+    user_is_plaintiff = True
+  else: 
+    user_is_defendant = True
+    user_is_plaintiff = False
+---
+id: About Your Case
+question: |
+  About Your Case
+subquestion: |
+  We need to know a bit more about the case you are involved in.
+fields:
+#  - "Is this court case in Superior Court?": court_superior
+#    datatype: yesno
+#  - "Is this court case in District Court?": court_district
+#    datatype: yesno 
+  - "What is the name of the town where the court is located?": court_town
+    maxlength: 21
+---
+id: court county
+question: |
+  What is the name of the Maine county where the court is located?
+fields:
+  - County: court_county
+    code: court_list._load_courts()["address_county"].unique()  
+#field: court_county
+#dropdown: 
+#  - "Androscoggin"
+#  - "Aroostook"
+#  - "Cumberland"
+#  - "Franklin"
+#  - "Hancock"
+#  - "Kennebec"
+#  - "Knox"
+#  - "Lincoln"
+#  - "Oxford"
+#  - "Penobscot"
+#  - "Piscataquis" 
+#  - "Sagadahaoc"
+#  - "Somerset"
+#  - "Waldo"
+#  - "Washington"
+#  - "York"
+---
+question: |
+  Is this case in District Court?
+field: court_selection
+buttons:
+  - "You bet": True
+  - "No way": False
+---
+code: |
+  if court_selection == True:
+    court_district = True
+    court_superior = False
+  else:
+    court_district = False
+    court_superior = True
+---
+id: Fee Waiver Request
+question: |
+  Fee Waiver Request
+subquestion: |
+  Which court fees and costs are you asking the court to waive?
+fields:
+  - "Filing Fee": filing_fee
+    datatype: yesno
+  - "Service Costs": service_costs
+    datatype: yesno
+  - "Mediation Fee": mediation_fee
+    datatype: yesno
+  - "Jury Fee": jury_fee
+    datatype: yesno
+  - "Appeal Fee": appeal_fee
+    datatype: yesno
+  - "I need a different cost or fee waived": other_fee
+    datatype: yesno
+  - "Please describe the other fees or costs you need the court to waive.": other_fee_description
+    show if: other_fee
+    maxlength: 42
+---
+id: service by mail
+question: |
+  Are you asking the court to pay the cost of service without first trying service by mail?
+yesno: no_service_by_mail
+---
+id: service by mail take two
+question: |
+  Please explain why you are asking the court to pay service fees without first trying service by mail. 
+fields: 
+  - Reasons for not trying service by mail: no_service_by_mail_reason
+    input type: area
+    maxlength: 270 
+---
+id: contact info
+question: |
+  How can the court reach you about this matter?
+fields:
+  - Phone number where you can be reached: user_phone_number
+    datatype: integer
+    required: False
+  - Email address: user_email
+    datatype: email
+    required: False
+---
+id: Signature test
+question: |
+  Sign your name
+subquestion: |
+  By signing your name, you are saying that: 1) The information on this form is true. 2) You are filing this in good faith. 3) You are not able to pay the fees you have asked to have waived. 4) If you become able to pay those fees while this case is going on, or if you win a settlement, that you will pay any fees that were waived. 
+signature: user_signature
+under: |
+  ${ "Sign your name here" }
+---
+id: preview feewaiverapp
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_court_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_feewaiverapp'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: feewaiverapp_preview_question    
+---
+#code: |
+#  signature_fields = ['users[0].signature']
+---
+code: |
+  # This is a placeholder for the addresses that will be searched
+  # for matching address to court. Edit if court venue is based on 
+  # a different address than the user's
+  [user.address.address for user in users.complete_elements()]
+  addresses_to_search = [user.address for user in users.complete_elements()]
+---
+id: feewaiverapp review screen
+event: review_feewaiverapp
+question: |
+  Review your answers
+review:
+  - Edit: plaintiffs.revisit
+    button: |
+      **Plaintiffs**
+
+      % for item in plaintiffs:
+        * ${ item }
+      % endfor
+  - Edit: court_superior
+    button: |
+      **Is this court case in Superior Court?**:
+      ${ word(yesno(court_superior)) }
+  - Edit: court_district
+    button: |
+      **Is this court case in District Court?**:
+      ${ word(yesno(court_district)) }
+  - Edit: courts.revisit
+    button: |
+      **Courts**
+
+      % for item in courts:
+        * ${ item }
+      % endfor
+  - Edit: court_town
+    button: |
+      **What is the name of the town where the court is located?**:
+      ${ court_town }
+  - Edit: docket_number
+    button: |
+      **Docket number**:
+      ${ docket_number }
+  - Edit: defendants.revisit
+    button: |
+      **Defendants**
+
+      % for item in defendants:
+        * ${ item }
+      % endfor
+  - Edit: user_is_plaintiff
+    button: |
+      **Did you start this court case?**:
+      ${ word(yesno(user_is_plaintiff)) }
+  - Edit: user_is_defendant
+    button: |
+      **Are you responding to a court case someone else started?**:
+      ${ word(yesno(user_is_defendant)) }
+  - Edit: filing_fee
+    button: |
+      **Do you need the court filing fee waived?**:
+      ${ word(yesno(filing_fee)) }
+  - Edit: service_costs
+    button: |
+      **Do you need the service costs waived?**:
+      ${ word(yesno(service_costs)) }
+  - Edit: mediation_fee
+    button: |
+      **Do you need the mediation fee waived?**:
+      ${ word(yesno(mediation_fee)) }
+  - Edit: jury_fee
+    button: |
+      **Do you need the jury fee waived?**:
+      ${ word(yesno(jury_fee)) }
+  - Edit: other_fee_description
+    button: |
+      **Please describe the other fees or costs you need the court to waive.**:
+      ${ other_fee_description }
+  - Edit: appeal_fee
+    button: |
+      **Do you need the appeal fee waived?**:
+      ${ word(yesno(appeal_fee)) }
+  - Edit: other_fee
+    button: |
+      **Are there other fees you need waived?**:
+      ${ word(yesno(other_fee)) }
+  - Edit: no_service_by_mail
+    button: |
+      **Are you asking the court to pay the cost of service without first trying service by mail?**:
+      ${ word(yesno(no_service_by_mail)) }
+  - Edit: no_service_by_mail_reason
+    button: |
+      **Please explain why you are asking the court to pay service fees without first trying service by mail.**:
+      > ${ single_paragraph(no_service_by_mail_reason) }
+  - Edit: users.revisit
+    button: |
+      **Users**
+
+      % for item in users:
+        * ${ item }
+      % endfor
+  - Edit: signature_date
+    button: |
+      **Date of signature**:
+      ${ signature_date }
+---
+continue button field: plaintiffs.revisit
+question: |
+  Edit plaintiffs
+subquestion: |
+  ${ plaintiffs.table }
+
+  ${ plaintiffs.add_action() }
+---
+table: plaintiffs.table
+rows: plaintiffs
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+edit:
+  - name.first
+confirm: True
+
+---
+continue button field: courts.revisit
+question: |
+  Edit courts
+subquestion: |
+  ${ courts.table }
+
+  ${ courts.add_action() }
+---
+table: courts.table
+rows: courts
+columns:
+  - Address: |
+      row_item.address.block() if defined("row_item.address.county") else ""
+edit:
+  - address.county
+confirm: True
+
+---
+continue button field: defendants.revisit
+question: |
+  Edit defendants
+subquestion: |
+  ${ defendants.table }
+
+  ${ defendants.add_action() }
+---
+table: defendants.table
+rows: defendants
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+edit:
+  - name.first
+confirm: True
+
+---
+continue button field: users.revisit
+question: |
+  Edit users
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Signature: |
+      row_item.signature if defined("row_item.signature") else ""
+  - Address: |
+      row_item.address.block() if defined("row_item.address.address") else ""
+  - Phone number: |
+      row_item.phone_number if defined("row_item.phone_number") else ""
+  - Email: |
+      row_item.email if defined("row_item.email") else ""
+edit:
+  - signature
+  - address.address
+  - phone_number
+  - email
+confirm: True
+
+---
+id: download feewaiverapp
+event: feewaiverapp_download
+question: |
+  All done
+subquestion: |
+  Thank you ${users}. Your form is ready to download and deliver.
+  
+  View, download and send your form below. Click the "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_feewaiverapp'), label='Edit answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - feewaiverapp_Post_interview_instructions: ALDocument.using(title="Instructions", filename="feewaiverapp_next_steps.docx", enabled=True, has_addendum=False)
+  - feewaiverapp_attachment: ALDocument.using(title="Maine Fee Waiver Application", filename="feewaiverapp", enabled=True, has_addendum=False, )
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[feewaiverapp_Post_interview_instructions, feewaiverapp_attachment], filename="feewaiverapp", title="All forms to download for your records", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[feewaiverapp_attachment],  filename="feewaiverapp", title="All forms to deliver to court", enabled=True)
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same template is 
+# used for "preview" and "final" keys, and logic in the template checks the value of 
+# `i` to show or hide the user's signature
+attachment:
+  name: Post-interview-Instructions
+  filename: feewaiverapp_next_steps
+  docx template file: feewaiverapp_next_steps.docx
+  variable name: feewaiverapp_Post_interview_instructions[i]
+  skip undefined: True
+---
+attachment:
+  name: feewaiverapp
+  filename: feewaiverapp
+  variable name: feewaiverapp_attachment[i]
+  skip undefined: True
+  pdf template file: feewaiverapp_fromgithubsavedwithFoxEdit.pdf
+  fields:
+      - "plaintiff_name": ${ plaintiffs[0] }
+      - "court_superior": ${ court_superior }
+      - "court_district": ${ court_district }
+      - "court_county": ${ court_county }
+      - "court_town": ${ court_town }
+      - "docket_number": ${ docket_number }
+      - "defendant_name": ${ defendants[0] }
+      - "user_is_plaintiff": ${ user_is_plaintiff }
+      - "user_is_defendant": ${ user_is_defendant }
+      - "filing_fee": ${ filing_fee }
+      - "service_costs": ${ service_costs }
+      - "mediation_fee": ${ mediation_fee }
+      - "jury_fee": ${ jury_fee }
+      - "other_fee_description": ${ other_fee_description }
+      - "appeal_fee": ${ appeal_fee }
+      - "other_fee": ${ other_fee }
+      - "no_service_by_mail": ${ no_service_by_mail }
+      - "no_service_by_mail_reason": ${ no_service_by_mail_reason }
+      - "user_signature": ${ user_signature }
+      - "signature_date": ${ signature_date }
+      - "user_address_line_one": ${ users[0].address.line_one() }
+      - "user_address_line_two": ${ users[0].address.line_two() }
+      - "user_phone_number": ${ user_phone_number }
+      - "user_email": ${ user_email }
+
+

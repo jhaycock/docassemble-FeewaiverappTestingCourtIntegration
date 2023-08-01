@@ -164,8 +164,9 @@ fields:
 #    datatype: yesno
 #  - "Is this court case in District Court?": court_district
 #    datatype: yesno 
-  - "What is the name of the town where the court is located?": court_town
-    maxlength: 21
+  - What is the name of the town where the court is located?: court_town
+    code: court_list._load_courts()["address_town"].unique()
+    #maxlength: 21
 ---
 id: court county
 question: |
